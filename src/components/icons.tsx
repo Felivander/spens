@@ -18,6 +18,7 @@ import {
   NavArrowLeft,
   NavArrowRight,
   Refresh,
+  Trash,
   Xmark,
 } from 'iconoir-react'
 
@@ -129,3 +130,8 @@ export function GoogleIcon({ size = 18 }: { size?: number }) {
     </svg>
   )
 }
+
+export function TrashIcon({ size = 18, strokeWidth = 1.5 }: IconProps) {
+  return <Trash width={size} height={size} strokeWidth={strokeWidth} aria-hidden="true" />
+}
+
