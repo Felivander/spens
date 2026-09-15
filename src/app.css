@@ -6,14 +6,51 @@
    structural. The only box-shadows are focus rings, which are state, not depth.
    ========================================================================= */
 
+.desktop-root {
+  display: contents;
+}
+
+.desktop-main {
+  display: none;
+}
+
 .app {
   position: relative; /* anchor for the floating chat bar */
   display: flex;
   flex-direction: column;
   height: 100dvh;
-  max-width: 34rem; /* keeps the measure sane on tablets and desktop */
+  max-width: 34rem; /* keeps the measure sane on tablets and mobile */
   margin-inline: auto;
   background: var(--paper);
+}
+
+@media (min-width: 1024px) {
+  .desktop-root {
+    display: flex;
+    inline-size: 100vw;
+    block-size: 100dvh;
+    overflow: hidden;
+    background: var(--paper);
+  }
+
+  .desktop-sidebar {
+    flex: 0 0 24rem; /* 384px */
+    max-width: 24rem;
+    margin-inline: 0;
+    border-inline-end: 1px solid var(--rule-strong);
+    height: 100dvh;
+    position: relative;
+  }
+
+  .desktop-main {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    height: 100dvh;
+    overflow-y: auto;
+    background: var(--paper-raised);
+    padding: 1.5rem 2.5rem 3rem;
+  }
 }
 
 /* ---------------------------------------------------------------- header -- */

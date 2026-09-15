@@ -7,6 +7,7 @@ import { HistoryPage } from './components/HistorySheet'
 import { MovementList } from './components/MovementList'
 import { RangeNav } from './components/RangeNav'
 import { SettingsSheet } from './components/SettingsSheet'
+import { DesktopDashboard } from './components/desktop/DesktopDashboard'
 import { HistoryIcon, MenuIcon } from './components/icons'
 
 import {
@@ -220,6 +221,7 @@ export default function App() {
   const handleUpdateCategory = useCallback((id: string, category: string) => {
     setMovements((prev) => {
       const next = prev.map((m) => (m.id === id ? { ...m, category } : m))
+      saveMovements(next)
       if (user) {
         const updated = next.find((m) => m.id === id)
         if (updated) void syncMovementsToCloud(user.id, [updated])
@@ -227,6 +229,21 @@ export default function App() {
       return next
     })
   }, [user])
+
+  const handleUpdateMovement = useCallback(
+    (id: string, patch: Partial<Omit<Movement, 'id' | 'createdAt'>>) => {
+      setMovements((prev) => {
+        const next = prev.map((m) => (m.id === id ? { ...m, ...patch } : m))
+        saveMovements(next)
+        if (user) {
+          const updated = next.find((m) => m.id === id)
+          if (updated) void syncMovementsToCloud(user.id, [updated])
+        }
+        return next
+      })
+    },
+    [user],
+  )
 
   const handleImportMovements = useCallback((imported: Movement[]) => {
     setMovements(imported)
@@ -260,95 +277,109 @@ export default function App() {
   /* --------------------------------------------------------------- view -- */
 
   return (
-    <div
-      className="app"
-      style={{ '--chat-h': `${chatHeight}px` } as React.CSSProperties}
-    >
-      <header className="header">
-        <button
-          type="button"
-          className="icon-btn"
-          onClick={() => setSheetOpen(true)}
-          aria-label="Abrir ajustes"
-        >
-          <MenuIcon />
-        </button>
-        <button
-          type="button"
-          className="icon-btn"
-          style={{ marginInlineStart: 'auto' }}
-          onClick={() => setHistoryOpen(true)}
-          aria-label="Abrir historial"
-        >
-          <HistoryIcon />
-        </button>
-      </header>
+    <div className="desktop-root">
+      <div
+        className="app desktop-sidebar"
+        style={{ '--chat-h': `${chatHeight}px` } as React.CSSProperties}
+      >
+        <header className="header">
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={() => setSheetOpen(true)}
+            aria-label="Abrir ajustes"
+          >
+            <MenuIcon />
+          </button>
+          <button
+            type="button"
+            className="icon-btn"
+            style={{ marginInlineStart: 'auto' }}
+            onClick={() => setHistoryOpen(true)}
+            aria-label="Abrir historial"
+          >
+            <HistoryIcon />
+          </button>
+        </header>
 
-      <BalanceCard
-        balance={balance}
-        todayCount={todayCount}
-        currency={currencySymbol}
-        locale={settings.locale}
-      />
-
-      <RangeNav
-        scope={scope}
-        tab={tab}
-        anchor={anchor}
-        onScopeChange={handleScopeChange}
-        onTabChange={setTab}
-        onAnchorChange={setAnchor}
-        selectedNet={visibleNet}
-        currency={currencySymbol}
-        locale={settings.locale}
-      />
-
-      {tab !== 'hoy' && tab !== 'ayer' && tab !== 'anteayer' && (
-        <div className="summary">
-          <span className="summary__period">{monthLabel(anchor)}</span>
-        </div>
-      )}
-
-      <main className="list" ref={listRef}>
-        <MovementList
-          movements={visible}
-          groupByDay={groupByDay}
+        <BalanceCard
+          balance={balance}
+          todayCount={todayCount}
           currency={currencySymbol}
           locale={settings.locale}
-          onDelete={handleDelete}
+        />
+
+        <RangeNav
+          scope={scope}
+          tab={tab}
+          anchor={anchor}
+          onScopeChange={handleScopeChange}
+          onTabChange={setTab}
+          onAnchorChange={setAnchor}
+          selectedNet={visibleNet}
+          currency={currencySymbol}
+          locale={settings.locale}
+        />
+
+        {tab !== 'hoy' && tab !== 'ayer' && tab !== 'anteayer' && (
+          <div className="summary">
+            <span className="summary__period">{monthLabel(anchor)}</span>
+          </div>
+        )}
+
+        <main className="list" ref={listRef}>
+          <MovementList
+            movements={visible}
+            groupByDay={groupByDay}
+            currency={currencySymbol}
+            locale={settings.locale}
+            onDelete={handleDelete}
+            onUpdateCategory={handleUpdateCategory}
+          />
+        </main>
+
+        <ChatBar
+          busy={busy}
+          note={note}
+          onSubmit={(t) => void handleSubmit(t)}
+          onHeightChange={setChatHeight}
+        />
+
+        {sheetOpen && (
+          <SettingsSheet
+            settings={settings}
+            movements={movements}
+            user={user}
+            onSignInWithGoogle={() => signInWithGoogle(settings)}
+            onSignOut={() => signOut(settings)}
+            onChange={(patch) => setSettings((prev) => ({ ...prev, ...patch }))}
+            onImport={handleImportMovements}
+            onClear={handleClearMovements}
+            onClose={() => setSheetOpen(false)}
+          />
+        )}
+
+        {historyOpen && (
+          <HistoryPage
+            movements={movements}
+            currency={currencySymbol}
+            locale={settings.locale}
+            onClose={() => setHistoryOpen(false)}
+          />
+        )}
+      </div>
+
+      <main className="desktop-main">
+        <DesktopDashboard
+          movements={movements}
+          anchor={anchor}
+          currency={currencySymbol}
+          locale={settings.locale}
           onUpdateCategory={handleUpdateCategory}
+          onUpdateMovement={handleUpdateMovement}
+          onDeleteMovement={handleDelete}
         />
       </main>
-
-      <ChatBar
-        busy={busy}
-        note={note}
-        onSubmit={(t) => void handleSubmit(t)}
-        onHeightChange={setChatHeight}
-      />
-
-      {sheetOpen && (
-        <SettingsSheet
-          settings={settings}
-          movements={movements}
-          user={user}
-          onSignInWithGoogle={() => signInWithGoogle(settings)}
-          onSignOut={() => signOut(settings)}
-          onChange={(patch) => setSettings((prev) => ({ ...prev, ...patch }))}
-          onImport={handleImportMovements}
-          onClear={handleClearMovements}
-          onClose={() => setSheetOpen(false)}
-        />
-      )}
-
-      {historyOpen && (
-        <HistoryPage
-          movements={movements}
-          currency={currencySymbol}
-          locale={settings.locale}
-          onClose={() => setHistoryOpen(false)}
-        />
-      )}
     </div>
   )
 }
