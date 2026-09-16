@@ -10,6 +10,7 @@ export interface MonthCalendarProps {
   movements: Movement[]
   selectedDay: string | null
   onSelectDay: (dayISO: string | null) => void
+  onQuickAdd?: (dayISO: string) => void
   currency: string
   locale: string
 }
@@ -19,6 +20,7 @@ export function MonthCalendar({
   movements,
   selectedDay,
   onSelectDay,
+  onQuickAdd,
   currency,
   locale,
 }: MonthCalendarProps) {
@@ -78,15 +80,27 @@ export function MonthCalendar({
     <div className="desk-calendar">
       <div className="desk-calendar__header">
         <span className="desk-calendar__title">Calendario</span>
-        {selectedDay && (
-          <button
-            type="button"
-            className="desk-calendar__reset-btn"
-            onClick={() => onSelectDay(null)}
-          >
-            Ver mes completo
-          </button>
-        )}
+        <div className="desk-calendar__header-actions">
+          {selectedDay && (
+            <>
+              <button
+                type="button"
+                className="desk-calendar__add-btn"
+                onClick={() => onQuickAdd?.(selectedDay)}
+                title="Agregar gasto en este día"
+              >
+                + Agregar gasto ({selectedDay.slice(8)})
+              </button>
+              <button
+                type="button"
+                className="desk-calendar__reset-btn"
+                onClick={() => onSelectDay(null)}
+              >
+                Ver mes
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="desk-calendar__weekdays">
@@ -104,9 +118,8 @@ export function MonthCalendar({
           const data = dailyTotals[cell.iso]
 
           return (
-            <button
+            <div
               key={cell.iso}
-              type="button"
               className={`desk-calendar__cell${
                 !cell.isCurrentMonth ? ' desk-calendar__cell--outside' : ''
               }${isSelected ? ' desk-calendar__cell--selected' : ''}${
@@ -117,11 +130,26 @@ export function MonthCalendar({
                   onSelectDay(isSelected ? null : cell.iso)
                 }
               }}
-              disabled={!cell.isCurrentMonth}
             >
-              <span className="desk-calendar__cell-num">
-                {cell.date.getDate()}
-              </span>
+              <div className="desk-calendar__cell-top">
+                <span className="desk-calendar__cell-num">
+                  {cell.date.getDate()}
+                </span>
+                {cell.isCurrentMonth && (
+                  <button
+                    type="button"
+                    className="desk-calendar__cell-add-btn"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onSelectDay(cell.iso)
+                      onQuickAdd?.(cell.iso)
+                    }}
+                    title={`Agregar gasto el ${cell.iso}`}
+                  >
+                    +
+                  </button>
+                )}
+              </div>
 
               {data && data.count > 0 && (
                 <span
@@ -133,7 +161,7 @@ export function MonthCalendar({
                   {formatMoney(Math.abs(data.net), currency, locale)}
                 </span>
               )}
-            </button>
+            </div>
           )
         })}
       </div>

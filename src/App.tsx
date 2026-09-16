@@ -245,6 +245,23 @@ export default function App() {
     [user],
   )
 
+  const handleAddMovement = useCallback(
+    (movement: Omit<Movement, 'id' | 'createdAt'>) => {
+      const created: Movement = {
+        ...movement,
+        id: newId(),
+        createdAt: Date.now(),
+      }
+      setMovements((prev) => {
+        const next = [...prev, created]
+        saveMovements(next)
+        if (user) void syncMovementsToCloud(user.id, [created])
+        return next
+      })
+    },
+    [user],
+  )
+
   const handleImportMovements = useCallback((imported: Movement[]) => {
     setMovements(imported)
     if (user) void syncMovementsToCloud(user.id, imported)
@@ -378,6 +395,7 @@ export default function App() {
           onUpdateCategory={handleUpdateCategory}
           onUpdateMovement={handleUpdateMovement}
           onDeleteMovement={handleDelete}
+          onAddMovement={handleAddMovement}
         />
       </main>
     </div>

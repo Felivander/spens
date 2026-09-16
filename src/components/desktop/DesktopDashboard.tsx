@@ -13,6 +13,7 @@ export interface DesktopDashboardProps {
   onUpdateCategory: (id: string, category: string) => void
   onUpdateMovement: (id: string, patch: Partial<Omit<Movement, 'id' | 'createdAt'>>) => void
   onDeleteMovement: (id: string) => void
+  onAddMovement: (movement: Omit<Movement, 'id' | 'createdAt'>) => void
 }
 
 export function DesktopDashboard({
@@ -23,18 +24,26 @@ export function DesktopDashboard({
   onUpdateCategory,
   onUpdateMovement,
   onDeleteMovement,
+  onAddMovement,
 }: DesktopDashboardProps) {
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
+  const [quickAddDay, setQuickAddDay] = useState<string | null>(null)
 
   // Reset day selection when the user switches months via RangeNav
   useEffect(() => {
     setSelectedDay(null)
+    setQuickAddDay(null)
   }, [anchor])
 
   // Movements belonging to the currently viewed month
   const monthMovements = useMemo(() => {
     return movements.filter((m) => isSameMonth(m.date, anchor))
   }, [movements, anchor])
+
+  const handleQuickAdd = (dayISO: string) => {
+    setSelectedDay(dayISO)
+    setQuickAddDay(dayISO)
+  }
 
   return (
     <div className="desk-dash">
@@ -58,6 +67,7 @@ export function DesktopDashboard({
             movements={monthMovements}
             selectedDay={selectedDay}
             onSelectDay={setSelectedDay}
+            onQuickAdd={handleQuickAdd}
             currency={currency}
             locale={locale}
           />
@@ -67,12 +77,18 @@ export function DesktopDashboard({
           <SpreadsheetTable
             movements={monthMovements}
             selectedDay={selectedDay}
-            onClearDayFilter={() => setSelectedDay(null)}
+            onClearDayFilter={() => {
+              setSelectedDay(null)
+              setQuickAddDay(null)
+            }}
             currency={currency}
             locale={locale}
             onUpdateCategory={onUpdateCategory}
             onUpdateMovement={onUpdateMovement}
             onDeleteMovement={onDeleteMovement}
+            onAddMovement={onAddMovement}
+            quickAddDay={quickAddDay}
+            onSetQuickAddDay={setQuickAddDay}
           />
         </div>
       </div>
