@@ -40,6 +40,15 @@ export function DesktopDashboard({
     return movements.filter((m) => isSameMonth(m.date, anchor))
   }, [movements, anchor])
 
+  const handleSelectDay = (dayISO: string | null) => {
+    setSelectedDay(dayISO)
+    if (dayISO) {
+      setQuickAddDay(dayISO)
+    } else {
+      setQuickAddDay(null)
+    }
+  }
+
   const handleQuickAdd = (dayISO: string) => {
     setSelectedDay(dayISO)
     setQuickAddDay(dayISO)
@@ -66,7 +75,7 @@ export function DesktopDashboard({
             anchor={anchor}
             movements={monthMovements}
             selectedDay={selectedDay}
-            onSelectDay={setSelectedDay}
+            onSelectDay={handleSelectDay}
             onQuickAdd={handleQuickAdd}
             currency={currency}
             locale={locale}
