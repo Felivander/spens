@@ -1,0 +1,815 @@
+/* ============================================================================
+   Spens — desktop layer (≥ 1024px)
+
+   A work surface, not a showcase: dense 13px rows, hairline structure, one
+   accent. Same tokens as the phone so both appearances stay in step.
+   ========================================================================= */
+
+.dk {
+  --dk-text: 0.8125rem; /* 13px — table body */
+  --dk-small: 0.75rem; /* 12px — labels, meta */
+  --dk-row: 2rem;
+
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  block-size: 100dvh;
+  font-size: var(--dk-text);
+  background: var(--paper);
+}
+
+.dk-pos {
+  color: var(--accent-text);
+}
+
+.dk-neg {
+  color: var(--ink);
+}
+
+/* ------------------------------------------------------------- controls -- */
+
+.dk-icon {
+  display: grid;
+  place-items: center;
+  inline-size: 1.875rem;
+  block-size: 1.875rem;
+  border-radius: 6px;
+  color: var(--ink-muted);
+}
+
+.dk-icon:hover {
+  color: var(--ink);
+  background: var(--paper-sunken);
+}
+
+.dk-btn {
+  block-size: 1.875rem;
+  padding-inline: 0.625rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: 6px;
+  font-size: var(--dk-small);
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--paper-raised);
+}
+
+.dk-btn:hover:not(:disabled) {
+  border-color: var(--ink-muted);
+}
+
+.dk-btn:disabled {
+  color: var(--ink-faint);
+}
+
+.dk-link {
+  font-size: var(--dk-small);
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--accent-text);
+}
+
+.dk-link:hover {
+  text-decoration: underline;
+}
+
+.dk-input {
+  block-size: 1.875rem;
+  padding-inline: 0.625rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: 6px;
+  font-size: var(--dk-text);
+  background: var(--paper-raised);
+  outline: none;
+}
+
+.dk-input:focus,
+.dk-cell-input:focus {
+  border-color: var(--accent);
+}
+
+.dk-kbd {
+  display: inline-grid;
+  place-items: center;
+  min-inline-size: 1.125rem;
+  block-size: 1.125rem;
+  padding-inline: 0.25rem;
+  margin-inline: 0.0625rem;
+  border: 1px solid var(--rule-strong);
+  border-block-end-width: 2px;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 0.6875rem;
+  line-height: 1;
+  color: var(--ink-muted);
+}
+
+.dk-seg {
+  display: inline-flex;
+  border: 1px solid var(--rule-strong);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.dk-seg button {
+  block-size: 1.75rem;
+  padding-inline: 0.625rem;
+  font-size: var(--dk-small);
+  color: var(--ink-muted);
+}
+
+.dk-seg button + button {
+  border-inline-start: 1px solid var(--rule-strong);
+}
+
+.dk-seg button[aria-pressed='true'] {
+  color: var(--ink);
+  font-weight: 600;
+  background: var(--paper-sunken);
+}
+
+.dk-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  block-size: 1.625rem;
+  padding-inline: 0.5rem 0.25rem;
+  border-radius: 6px;
+  font-size: var(--dk-small);
+  font-weight: 600;
+  color: var(--accent-text);
+  background: var(--accent-wash);
+}
+
+.dk-chip button {
+  display: grid;
+  place-items: center;
+  inline-size: 1.125rem;
+  block-size: 1.125rem;
+  border-radius: 4px;
+}
+
+.dk-chip button:hover {
+  background: var(--accent-wash);
+}
+
+button:focus-visible,
+select:focus-visible,
+.dk-cal__day:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* ------------------------------------------------------------- top bar -- */
+
+.dk-top {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  block-size: 3.25rem;
+  padding-inline: 1rem;
+  border-block-end: 1px solid var(--rule-strong);
+  background: var(--paper);
+}
+
+.dk-top__brand {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.dk-top__brand::before {
+  content: '';
+  display: inline-block;
+  inline-size: 0.5rem;
+  block-size: 0.5rem;
+  margin-inline-end: 0.4375rem;
+  border-radius: 50%;
+  background: var(--accent);
+  vertical-align: 0.0625rem;
+}
+
+.dk-month {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.dk-month__label {
+  min-inline-size: 9.5rem;
+  font-size: var(--text-nav);
+  font-weight: 700;
+  text-align: center;
+  text-transform: capitalize;
+  font-variant-numeric: tabular-nums;
+}
+
+.dk-month .dk-btn {
+  margin-inline-start: 0.25rem;
+}
+
+.dk-sync {
+  margin-inline-start: auto;
+  font-size: var(--dk-small);
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+.dk-sync::before {
+  content: '';
+  display: inline-block;
+  inline-size: 0.375rem;
+  block-size: 0.375rem;
+  margin-inline-end: 0.375rem;
+  border-radius: 50%;
+  background: var(--ink-faint);
+  vertical-align: 0.0625rem;
+}
+
+.dk-sync--on::before {
+  background: oklch(0.65 0.15 150);
+}
+
+/* ---------------------------------------------------------- command bar -- */
+
+.dk-cmd {
+  position: relative;
+  flex: 1 1 auto;
+  max-inline-size: 40rem;
+}
+
+.dk-cmd__form {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  block-size: 2.25rem;
+  padding-inline: 0.375rem 0.25rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: 8px;
+  background: var(--paper-raised);
+}
+
+.dk-cmd__form:focus-within {
+  border-color: var(--accent);
+}
+
+.dk-cmd__input {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  padding-inline: 0.25rem;
+  font-size: var(--text-nav);
+  outline: none;
+}
+
+.dk-cmd__input::placeholder {
+  color: var(--ink-faint);
+}
+
+.dk-cmd__target {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
+  flex: 0 0 auto;
+  block-size: 1.5rem;
+  padding-inline: 0.5rem 0.125rem;
+  border-radius: 5px;
+  font-size: var(--dk-small);
+  font-weight: 600;
+  color: var(--accent-text);
+  background: var(--accent-wash);
+}
+
+.dk-cmd__target-x {
+  display: grid;
+  place-items: center;
+  inline-size: 1.125rem;
+  block-size: 1.125rem;
+  border-radius: 4px;
+}
+
+.dk-cmd__send {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  inline-size: 1.75rem;
+  block-size: 1.75rem;
+  border-radius: 6px;
+  color: var(--on-accent);
+  background: var(--accent);
+}
+
+.dk-cmd__send:disabled {
+  color: var(--ink-faint);
+  background: var(--paper-sunken);
+}
+
+.dk-cmd__note {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: calc(100% + 0.375rem);
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--rule-strong);
+  border-inline-start: 3px solid var(--ink-muted);
+  border-radius: 6px;
+  font-size: var(--dk-small);
+  color: var(--ink);
+  background: var(--paper-raised);
+  animation: note-in var(--base) var(--ease) both;
+}
+
+.dk-cmd__note--error {
+  border-inline-start-color: var(--accent);
+}
+
+.dk-cmd__note-text {
+  flex: 1 1 auto;
+}
+
+.dk-cmd__note-action {
+  font-weight: 700;
+  color: var(--accent-text);
+}
+
+/* --------------------------------------------------------------- summary -- */
+
+.dk-summary {
+  display: flex;
+  border-block-end: 1px solid var(--rule-strong);
+  background: var(--paper-raised);
+  overflow-x: auto;
+}
+
+.dk-stat {
+  flex: 1 1 0;
+  min-inline-size: max-content;
+  padding: 0.5rem 1rem 0.5625rem;
+  border-inline-end: 1px solid var(--rule);
+}
+
+.dk-stat:last-child {
+  border-inline-end: none;
+}
+
+.dk-stat dt {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.dk-stat dd {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.dk-stat__sub {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--ink-muted);
+}
+
+/* ------------------------------------------------------------------ body -- */
+
+.dk-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 19rem;
+  min-block-size: 0;
+}
+
+@media (min-width: 1440px) {
+  .dk-body {
+    grid-template-columns: minmax(0, 1fr) 22rem;
+  }
+}
+
+/* ---------------------------------------------------------------- ledger -- */
+
+.dk-ledger {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 0;
+  border-inline-end: 1px solid var(--rule-strong);
+}
+
+.dk-ledger__bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-block-end: 1px solid var(--rule);
+}
+
+.dk-ledger__search {
+  inline-size: 14rem;
+}
+
+.dk-ledger__totals {
+  margin-inline-start: auto;
+  font-size: var(--dk-small);
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+.dk-ledger__scroll {
+  flex: 1 1 auto;
+  min-block-size: 0;
+  overflow: auto;
+}
+
+.dk-table {
+  inline-size: 100%;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.dk-table th {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 2;
+  block-size: 1.875rem;
+  padding-inline: 0.5rem;
+  border-block-end: 1px solid var(--rule-strong);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-align: start;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  background: var(--paper);
+}
+
+.dk-table th:first-child,
+.dk-table td:first-child {
+  padding-inline-start: 1rem;
+}
+
+.dk-table th button {
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+}
+
+.dk-table th button:hover {
+  color: var(--ink);
+}
+
+.dk-table td {
+  block-size: var(--dk-row);
+  padding-inline: 0.25rem;
+  border-block-end: 1px solid var(--rule);
+  vertical-align: middle;
+}
+
+.dk-num {
+  text-align: end;
+}
+
+.dk-table th.dk-num button {
+  inline-size: 100%;
+  text-align: end;
+}
+
+.dk-table__day td {
+  block-size: 1.75rem;
+  padding-block-start: 0.5rem;
+  font-size: var(--dk-small);
+  font-weight: 700;
+  color: var(--ink-muted);
+  background: var(--paper);
+  border-block-end-color: var(--rule-strong);
+}
+
+.dk-table__day td.dk-num {
+  padding-inline-end: 0.5rem;
+}
+
+.dk-table__row:hover td {
+  background: var(--paper-raised);
+}
+
+.dk-table__row--fresh td {
+  animation: dk-fresh 1.8s var(--ease) both;
+}
+
+@keyframes dk-fresh {
+  from {
+    background: var(--accent-wash);
+  }
+}
+
+.dk-table__empty {
+  padding: 3rem 1rem !important;
+  text-align: center;
+  color: var(--ink-muted);
+}
+
+.dk-table__empty code {
+  padding: 0.0625rem 0.375rem;
+  border-radius: 4px;
+  font-family: inherit;
+  color: var(--ink);
+  background: var(--paper-sunken);
+}
+
+/* Every cell is a button that turns into an input — spreadsheet behaviour. */
+.dk-cell {
+  display: block;
+  inline-size: 100%;
+  block-size: 1.625rem;
+  padding-inline: 0.25rem;
+  border-radius: 4px;
+  font-size: var(--dk-text);
+  text-align: start;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dk-cell:hover {
+  background: var(--paper-sunken);
+}
+
+.dk-cell small {
+  margin-inline-start: 0.25rem;
+  font-size: 0.6875rem;
+  color: var(--ink-faint);
+}
+
+.dk-cell.dk-num {
+  text-align: end;
+  font-weight: 600;
+}
+
+.dk-cell--select {
+  appearance: none;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+
+.dk-cell--select option {
+  color: var(--ink);
+  background: var(--paper-raised);
+}
+
+.dk-cell-input {
+  inline-size: 100%;
+  block-size: 1.625rem;
+  padding-inline: 0.25rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: 4px;
+  font-size: var(--dk-text);
+  background: var(--paper-raised);
+  outline: none;
+}
+
+.dk-kind {
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
+  border-radius: 4px;
+  font-weight: 700;
+  color: var(--ink-muted);
+}
+
+.dk-kind--ingreso {
+  color: var(--accent-text);
+  background: var(--accent-wash);
+}
+
+.dk-kind:hover {
+  background: var(--paper-sunken);
+}
+
+.dk-del {
+  display: grid;
+  place-items: center;
+  inline-size: 1.625rem;
+  block-size: 1.625rem;
+  border-radius: 4px;
+  color: var(--ink-faint);
+  opacity: 0;
+}
+
+.dk-table__row:hover .dk-del,
+.dk-del:focus-visible {
+  opacity: 1;
+}
+
+.dk-del:hover {
+  color: oklch(0.58 0.2 25);
+  background: var(--paper-sunken);
+}
+
+/* ------------------------------------------------------------- side rail -- */
+
+.dk-side {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-block-size: 0;
+  padding: 0.875rem 1rem 1rem;
+  overflow-y: auto;
+}
+
+.dk-panel__title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-block-end: 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.dk-panel__empty {
+  font-size: var(--dk-small);
+  color: var(--ink-muted);
+}
+
+.dk-keys {
+  margin-block-start: auto;
+  font-size: 0.6875rem;
+  color: var(--ink-muted);
+  line-height: 1.8;
+}
+
+/* -------------------------------------------------------------- calendar -- */
+
+.dk-cal {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+}
+
+.dk-cal__wd {
+  padding-block-end: 0.125rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-align: center;
+  color: var(--ink-faint);
+}
+
+.dk-cal__day {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  block-size: 2.625rem;
+  padding: 0.1875rem 0.25rem;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  text-align: start;
+  background: color-mix(in oklch, var(--accent) var(--heat, 0%), var(--paper-raised));
+}
+
+.dk-cal__day:hover {
+  border-color: var(--rule-strong);
+}
+
+.dk-cal__day--future {
+  background: transparent;
+}
+
+.dk-cal__day--future .dk-cal__num {
+  color: var(--ink-faint);
+}
+
+.dk-cal__day--today {
+  border-color: var(--ink);
+}
+
+.dk-cal__day--sel {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.dk-cal__num {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--ink-muted);
+}
+
+.dk-cal__day--today .dk-cal__num {
+  color: var(--ink);
+}
+
+.dk-cal__amt {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.1875rem;
+  min-block-size: 0.875rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.dk-cal__in {
+  inline-size: 0.3125rem;
+  block-size: 0.3125rem;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* ------------------------------------------------------------ categories -- */
+
+.dk-cats {
+  list-style: none;
+}
+
+.dk-cats__row {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 2.5rem auto;
+  align-items: center;
+  gap: 0.5rem;
+  inline-size: 100%;
+  block-size: 1.875rem;
+  padding-inline: 0.375rem;
+  border-radius: 4px;
+  font-size: var(--dk-small);
+  text-align: start;
+  overflow: hidden;
+}
+
+.dk-cats__row:hover {
+  background: var(--paper-raised);
+}
+
+.dk-cats__row--on {
+  background: var(--accent-wash);
+}
+
+.dk-cats__name {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dk-cats__pct {
+  text-align: end;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.dk-cats__amt {
+  font-weight: 600;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.dk-cats__bar {
+  position: absolute;
+  inset-inline-start: 0.375rem;
+  inset-block-end: 0.1875rem;
+  block-size: 2px;
+  max-inline-size: calc(100% - 0.75rem);
+  border-radius: 1px;
+  background: var(--accent);
+  transition: inline-size var(--base) var(--ease);
+}
+
+/* ------------------------------------------- settings sheet as a dialog -- */
+
+@media (min-width: 1024px) {
+  .sheet {
+    inset-block: 50% auto;
+    translate: 0 -50%;
+    max-inline-size: 30rem;
+    max-block-size: 80dvh;
+    border-radius: 12px;
+    border-block-end: 1px solid var(--rule-strong);
+    animation: dk-dialog-in var(--base) var(--ease) both;
+  }
+
+  .sheet__grip {
+    display: none;
+  }
+
+  .sheet__header {
+    cursor: default;
+    padding-block-start: 0.75rem;
+  }
+}
+
+@keyframes dk-dialog-in {
+  from {
+    opacity: 0;
+    scale: 0.98;
+  }
+}

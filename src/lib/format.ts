@@ -25,3 +25,31 @@ export function formatSigned(
   const glyph = kind === 'ingreso' ? '+' : '−'
   return `${glyph}${currency}${formatAmount(Math.abs(value), locale)}`
 }
+
+/** Calendar-cell size: "850", "12,3k", "1,2M". */
+export function formatCompact(value: number, locale = 'es-AR'): string {
+  const abs = Math.abs(value)
+  const fmt = (n: number) =>
+    new Intl.NumberFormat(locale, { maximumFractionDigits: n < 10 ? 1 : 0 }).format(n)
+  if (abs >= 1_000_000) return `${fmt(abs / 1_000_000)}M`
+  if (abs >= 1_000) return `${fmt(abs / 1_000)}k`
+  return fmt(abs)
+}
+
+/**
+ * Reads an amount typed into an edit field the way an es-AR user writes it:
+ * "1.200" is twelve hundred (not 1.2), "1.200,50" has cents, "15k" works.
+ * Returns NaN when nothing sensible is there.
+ */
+export function parseAmountInput(raw: string): number {
+  let s = raw.trim().toLowerCase().replace(/[$\s]/g, '')
+  let mult = 1
+  if (s.endsWith('k')) {
+    mult = 1000
+    s = s.slice(0, -1)
+  }
+  if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.')
+  else if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '')
+  const n = Number(s)
+  return s && Number.isFinite(n) ? n * mult : NaN
+}

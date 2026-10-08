@@ -1,170 +1,84 @@
 import { useMemo } from 'react'
-import type { Movement } from '../../types'
-import { formatMoney } from '../../lib/format'
+import { formatCompact } from '../../lib/format'
 import { toISODate, todayISO, weekdayIndex } from '../../lib/dates'
+import type { Movement } from '../../types'
 
-const WEEKDAY_NAMES = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
+const WEEKDAY_INITIALS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 
-export interface MonthCalendarProps {
+interface Props {
   anchor: Date
+  /** Movements of the anchored month only. */
   movements: Movement[]
   selectedDay: string | null
   onSelectDay: (dayISO: string | null) => void
-  onQuickAdd?: (dayISO: string) => void
-  currency: string
   locale: string
 }
 
-export function MonthCalendar({
-  anchor,
-  movements,
-  selectedDay,
-  onSelectDay,
-  onQuickAdd,
-  currency,
-  locale,
-}: MonthCalendarProps) {
+/**
+ * Compact month grid. Each day is shaded by how much was spent relative to the
+ * month's heaviest day, so the shape of the month reads at a glance; the cell
+ * also prints the amount. Clicking a day filters the ledger and points the
+ * command bar at it.
+ */
+export function MonthCalendar({ anchor, movements, selectedDay, onSelectDay, locale }: Props) {
   const year = anchor.getFullYear()
   const month = anchor.getMonth()
 
-  // Map daily totals
-  const dailyTotals = useMemo(() => {
-    const map: Record<string, { net: number; count: number; gasto: number; ingreso: number }> = {}
+  const { days, max } = useMemo(() => {
+    const days: Record<string, { gasto: number; ingreso: number }> = {}
     for (const m of movements) {
-      if (!map[m.date]) map[m.date] = { net: 0, count: 0, gasto: 0, ingreso: 0 }
-      if (m.kind === 'ingreso') {
-        map[m.date].net += m.amount
-        map[m.date].ingreso += m.amount
-      } else {
-        map[m.date].net -= m.amount
-        map[m.date].gasto += m.amount
-      }
-      map[m.date].count += 1
+      const d = (days[m.date] ??= { gasto: 0, ingreso: 0 })
+      d[m.kind] += m.amount
     }
-    return map
+    const max = Math.max(0, ...Object.values(days).map((d) => d.gasto))
+    return { days, max }
   }, [movements])
 
-  // Generate 7-day grid days (Monday-first)
-  const calendarCells = useMemo(() => {
-    const firstDayOfMonth = new Date(year, month, 1)
-    const lastDayOfMonth = new Date(year, month + 1, 0)
-    const startDay = weekdayIndex(firstDayOfMonth) // 0 = Lun ... 6 = Dom
-
-    const cells: { date: Date; isCurrentMonth: boolean; iso: string }[] = []
-
-    // Previous month padding
-    for (let i = startDay; i > 0; i--) {
-      const d = new Date(year, month, 1 - i)
-      cells.push({ date: d, isCurrentMonth: false, iso: toISODate(d) })
-    }
-
-    // Current month days
-    for (let i = 1; i <= lastDayOfMonth.getDate(); i++) {
-      const d = new Date(year, month, i)
-      cells.push({ date: d, isCurrentMonth: true, iso: toISODate(d) })
-    }
-
-    // Next month padding to fill complete weeks
-    const remaining = (7 - (cells.length % 7)) % 7
-    for (let i = 1; i <= remaining; i++) {
-      const d = new Date(year, month + 1, i)
-      cells.push({ date: d, isCurrentMonth: false, iso: toISODate(d) })
-    }
-
-    return cells
-  }, [year, month])
-
+  const lead = weekdayIndex(new Date(year, month, 1))
+  const count = new Date(year, month + 1, 0).getDate()
   const today = todayISO()
 
   return (
-    <div className="desk-calendar">
-      <div className="desk-calendar__header">
-        <span className="desk-calendar__title">Calendario</span>
-        <div className="desk-calendar__header-actions">
-          {selectedDay && (
-            <>
-              <button
-                type="button"
-                className="desk-calendar__add-btn"
-                onClick={() => onQuickAdd?.(selectedDay)}
-                title="Agregar gasto en este día"
-              >
-                + Agregar gasto ({selectedDay.slice(8)})
-              </button>
-              <button
-                type="button"
-                className="desk-calendar__reset-btn"
-                onClick={() => onSelectDay(null)}
-              >
-                Ver mes
-              </button>
-            </>
-          )}
-        </div>
-      </div>
+    <div className="dk-cal" role="grid" aria-label="Calendario del mes">
+      {WEEKDAY_INITIALS.map((w, i) => (
+        <span key={i} className="dk-cal__wd" aria-hidden="true">
+          {w}
+        </span>
+      ))}
+      {Array.from({ length: lead }, (_, i) => (
+        <span key={`pad${i}`} aria-hidden="true" />
+      ))}
+      {Array.from({ length: count }, (_, i) => {
+        const iso = toISODate(new Date(year, month, i + 1))
+        const d = days[iso]
+        const heat = d && max > 0 ? Math.round((d.gasto / max) * 45) : 0
+        const cls = [
+          'dk-cal__day',
+          iso === today && 'dk-cal__day--today',
+          iso === selectedDay && 'dk-cal__day--sel',
+          iso > today && 'dk-cal__day--future',
+        ]
+          .filter(Boolean)
+          .join(' ')
 
-      <div className="desk-calendar__weekdays">
-        {WEEKDAY_NAMES.map((w) => (
-          <div key={w} className="desk-calendar__weekday">
-            {w}
-          </div>
-        ))}
-      </div>
-
-      <div className="desk-calendar__grid">
-        {calendarCells.map((cell) => {
-          const isSelected = selectedDay === cell.iso
-          const isToday = cell.iso === today
-          const data = dailyTotals[cell.iso]
-
-          return (
-            <div
-              key={cell.iso}
-              className={`desk-calendar__cell${
-                !cell.isCurrentMonth ? ' desk-calendar__cell--outside' : ''
-              }${isSelected ? ' desk-calendar__cell--selected' : ''}${
-                isToday ? ' desk-calendar__cell--today' : ''
-              }`}
-              onClick={() => {
-                if (cell.isCurrentMonth) {
-                  onSelectDay(isSelected ? null : cell.iso)
-                }
-              }}
-            >
-              <div className="desk-calendar__cell-top">
-                <span className="desk-calendar__cell-num">
-                  {cell.date.getDate()}
-                </span>
-                {cell.isCurrentMonth && (
-                  <button
-                    type="button"
-                    className="desk-calendar__cell-add-btn"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onSelectDay(cell.iso)
-                      onQuickAdd?.(cell.iso)
-                    }}
-                    title={`Agregar gasto el ${cell.iso}`}
-                  >
-                    +
-                  </button>
-                )}
-              </div>
-
-              {data && data.count > 0 && (
-                <span
-                  className={`desk-calendar__cell-badge${
-                    data.net > 0 ? ' desk-calendar__cell-badge--pos' : ''
-                  }`}
-                >
-                  {data.net > 0 ? '+' : '−'}
-                  {formatMoney(Math.abs(data.net), currency, locale)}
-                </span>
-              )}
-            </div>
-          )
-        })}
-      </div>
+        return (
+          <button
+            key={iso}
+            type="button"
+            className={cls}
+            style={{ '--heat': `${heat}%` } as React.CSSProperties}
+            aria-pressed={iso === selectedDay}
+            title={iso}
+            onClick={() => onSelectDay(iso === selectedDay ? null : iso)}
+          >
+            <span className="dk-cal__num">{i + 1}</span>
+            <span className="dk-cal__amt">
+              {d?.gasto ? formatCompact(d.gasto, locale) : ''}
+              {d?.ingreso ? <i className="dk-cal__in" aria-label="con ingreso" /> : null}
+            </span>
+          </button>
+        )
+      })}
     </div>
   )
 }
