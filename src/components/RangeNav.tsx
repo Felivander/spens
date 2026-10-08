@@ -2,12 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { WEEKDAYS } from '../lib/dates'
 import { formatMoney } from '../lib/format'
 import type { Scope, Tab } from '../types'
-import { CheckIcon } from './icons'
-
-const SCOPES: { value: Scope; label: string }[] = [
-  { value: 'mes', label: 'Mes' },
-  { value: 'semana', label: 'Semana' },
-]
 
 const MONTH_ABBRS = [
   'ene', 'feb', 'mar', 'abr', 'may', 'jun',
@@ -37,10 +31,8 @@ export function RangeNav({
   currency,
   locale,
 }: Props) {
-  const [open, setOpen] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const [showMonthPicker, setShowMonthPicker] = useState(false)
-  const anchorRef = useRef<HTMLDivElement>(null)
   const scrollerRef = useRef<HTMLDivElement>(null)
   const monthsRef = useRef<HTMLDivElement>(null)
   const chipRef = useRef<HTMLButtonElement>(null)
@@ -64,28 +56,6 @@ export function RangeNav({
       if (monthsRef.current) monthsRef.current.scrollLeft = 0
     }
   }, [showMonthPicker])
-
-  // Close scope dropdown on outside click or Esc
-  useEffect(() => {
-    if (!open) return
-
-    const onPointerDown = (e: PointerEvent) => {
-      if (!anchorRef.current?.contains(e.target as Node)) setOpen(false)
-    }
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setOpen(false)
-        chipRef.current?.focus()
-      }
-    }
-
-    document.addEventListener('pointerdown', onPointerDown)
-    document.addEventListener('keydown', onKeyDown)
-    return () => {
-      document.removeEventListener('pointerdown', onPointerDown)
-      document.removeEventListener('keydown', onKeyDown)
-    }
-  }, [open])
 
   // Close month picker on outside click or Esc
   useEffect(() => {
@@ -122,7 +92,6 @@ export function RangeNav({
 
   const pickScope = (next: Scope) => {
     onScopeChange(next)
-    setOpen(false)
     setShowMonthPicker(false)
     chipRef.current?.focus()
   }
@@ -137,7 +106,8 @@ export function RangeNav({
     }
   }
 
-  const mainTabLabel = isCurrentMonth ? 'mes' : MONTH_ABBRS[anchor.getMonth()]
+  const mainTabLabel =
+    scope === 'semana' ? 'sem' : isCurrentMonth ? 'mes' : MONTH_ABBRS[anchor.getMonth()]
 
   // Re-order months so the selected month is ALWAYS first on the left
   const selectedMonthIndex = anchor.getMonth()
@@ -145,40 +115,22 @@ export function RangeNav({
 
   return (
     <nav className="nav" aria-label="Periodo">
-      <div className="nav__scroller" role="tablist" aria-label="Rango de movimientos" ref={scrollerRef}>
+      <div className={`nav__scroller${scope === 'semana' ? ' nav__scroller--week' : ''}`} role="tablist" aria-label="Rango de movimientos" ref={scrollerRef}>
         {/* Main single month/scope button (collapses when 12-month strip opens) */}
         <div className={`nav__main-tab${showMonthPicker ? ' nav__main-tab--collapsed' : ''}`}>
-          <div className="menu-anchor" ref={anchorRef}>
+          <div className="menu-anchor">
             <button
               ref={chipRef}
               type="button"
               role="tab"
               className={`tab${!isCurrentMonth ? ' tab--custom-month' : ''}`}
               aria-selected={periodSelected}
-              aria-haspopup="menu"
-              aria-expanded={open}
+              aria-expanded={showMonthPicker}
               onClick={handleMainTabClick}
             >
               {mainTabLabel}
             </button>
 
-            {open && (
-              <div className="menu" role="menu" aria-label="Elegir rango">
-                {SCOPES.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    role="menuitemradio"
-                    aria-checked={scope === option.value}
-                    className="menu__item"
-                    onClick={() => pickScope(option.value)}
-                  >
-                    {option.label}
-                    {scope === option.value && <CheckIcon />}
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
         </div>
 
@@ -188,6 +140,15 @@ export function RangeNav({
           className={`nav__months${showMonthPicker ? ' nav__months--open' : ''}`}
           aria-hidden={!showMonthPicker}
         >
+          {/* Scope switch lives at the head of the strip so it is always discoverable */}
+          <button
+            type="button"
+            tabIndex={showMonthPicker ? 0 : -1}
+            className="tab tab--scope"
+            onClick={() => pickScope(scope === 'mes' ? 'semana' : 'mes')}
+          >
+            {scope === 'mes' ? 'semana' : 'mes'}
+          </button>
           {orderedMonthIndices.map((monthIndex) => {
             const m = MONTH_ABBRS[monthIndex]
             const isSelected = anchor.getMonth() === monthIndex
@@ -201,6 +162,7 @@ export function RangeNav({
                 className={`tab${isSelected ? ' tab--selected-month' : ''}${isTodayMonth ? ' tab--today-month' : ''}`}
                 aria-selected={isSelected}
                 onClick={() => {
+                  if (scope === 'semana') onScopeChange('mes')
                   onAnchorChange(new Date(anchor.getFullYear(), monthIndex, 1))
                   onTabChange('periodo')
                   setShowMonthPicker(false)
