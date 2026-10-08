@@ -56,6 +56,8 @@ export default function App() {
 
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState<ChatNote | null>(null)
+  /** Last movement removed from the phone list, offered back in the note. */
+  const [undoMovement, setUndoMovement] = useState<Movement | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   /** Measured height of the floating chat bar, so the list can clear it. */
@@ -213,6 +215,7 @@ export default function App() {
     async (text: string) => {
       setBusy(true)
       setNote(null)
+      setUndoMovement(null)
       const { created, note } = await addFromText(text, activeTargetDate)
       setNote(note)
       setBusy(false)
@@ -279,9 +282,12 @@ export default function App() {
   // Clear the confirmation line after a beat so it doesn't linger as chrome.
   useEffect(() => {
     if (!note) return
-    const t = setTimeout(() => setNote(null), note.tone === 'error' ? 7000 : 4500)
+    const t = setTimeout(() => {
+      setNote(null)
+      setUndoMovement(null)
+    }, undoMovement ? 8000 : note.tone === 'error' ? 7000 : 4500)
     return () => clearTimeout(t)
-  }, [note])
+  }, [note, undoMovement])
 
   const groupByDay = tab === 'periodo'
 
@@ -383,14 +389,34 @@ export default function App() {
           groupByDay={groupByDay}
           currency={currencySymbol}
           locale={settings.locale}
-          onDelete={handleDelete}
+          onDelete={(id) => {
+            const removed = movements.find((m) => m.id === id)
+            handleDelete(id)
+            if (removed) {
+              setUndoMovement(removed)
+              setNote({ text: `Borrado: ${removed.description}.`, tone: 'ok' })
+            }
+          }}
           onUpdateCategory={handleUpdateCategory}
+          onUpdate={handleUpdateMovement}
         />
       </main>
 
       <ChatBar
         busy={busy}
         note={note}
+        noteAction={
+          undoMovement
+            ? {
+                label: 'Deshacer',
+                run: () => {
+                  handleRestoreMovement(undoMovement)
+                  setUndoMovement(null)
+                  setNote(null)
+                },
+              }
+            : null
+        }
         onSubmit={(t) => void handleSubmit(t)}
         onHeightChange={setChatHeight}
       />

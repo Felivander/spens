@@ -67,7 +67,37 @@ function TodoTab({ movements, currency, locale }: Omit<Props, 'onClose'>) {
 
 /* --------------------------------------------------------------- Resumen -- */
 
-function ResumenTab({ movements, currency, locale }: Omit<Props, 'onClose'>) {
+/** "Proyección $X · 12% más que sep a esta altura" — only what the data supports. */
+function insight(all: Movement[], anchor: Date, gastos: number) {
+  const now = new Date()
+  const y = anchor.getFullYear()
+  const mo = anchor.getMonth()
+  const isCurrent = y === now.getFullYear() && mo === now.getMonth()
+  const cutDay = isCurrent ? now.getDate() : 31
+  const prev = new Date(y, mo - 1, 1)
+
+  let prevGastos = 0
+  for (const m of all) {
+    if (m.kind !== 'gasto') continue
+    const d = fromISODate(m.date)
+    if (d.getFullYear() === prev.getFullYear() && d.getMonth() === prev.getMonth() && d.getDate() <= cutDay) {
+      prevGastos += m.amount
+    }
+  }
+
+  const daysInMonth = new Date(y, mo + 1, 0).getDate()
+  const projected = isCurrent ? (gastos / now.getDate()) * daysInMonth : null
+  const delta = prevGastos > 0 ? (gastos - prevGastos) / prevGastos : null
+  return { projected, delta, prevLabel: MONTHS[prev.getMonth()].slice(0, 3), isCurrent }
+}
+
+function ResumenTab({
+  movements,
+  allMovements,
+  anchor,
+  currency,
+  locale,
+}: Omit<Props, 'onClose'> & { allMovements: Movement[]; anchor: Date }) {
   const stats = useMemo(() => {
     const byCategory: Record<string, { gastos: number; ingresos: number }> = {}
 
@@ -88,6 +118,11 @@ function ResumenTab({ movements, currency, locale }: Omit<Props, 'onClose'>) {
 
     return { rows, totalGastos, totalIngresos, maxAmount }
   }, [movements])
+
+  const info = useMemo(
+    () => insight(allMovements, anchor, stats.totalGastos),
+    [allMovements, anchor, stats.totalGastos],
+  )
 
   if (stats.rows.length === 0) {
     return (
@@ -115,6 +150,23 @@ function ResumenTab({ movements, currency, locale }: Omit<Props, 'onClose'>) {
           </span>
         </div>
       </div>
+
+      {(info.projected !== null || info.delta !== null) && (
+        <p className="hist__insight">
+          {info.projected !== null && (
+            <>
+              Proyección del mes <strong>{formatMoney(Math.round(info.projected), currency, locale)}</strong>
+            </>
+          )}
+          {info.projected !== null && info.delta !== null && ' · '}
+          {info.delta !== null && (
+            <>
+              {Math.abs(Math.round(info.delta * 100))}% {info.delta >= 0 ? 'más' : 'menos'} que {info.prevLabel}
+              {info.isCurrent ? ' a esta altura' : ''}
+            </>
+          )}
+        </p>
+      )}
 
       {/* Per-category rows */}
       {stats.rows.map(({ cat, gastos, ingresos }) => {
@@ -224,7 +276,7 @@ export function HistoryPage({ movements, currency, locale, onClose }: Props) {
       <main className="hist-page__body">
         {tab === 'todo'
           ? <TodoTab movements={monthMovements} currency={currency} locale={locale} />
-          : <ResumenTab movements={monthMovements} currency={currency} locale={locale} />
+          : <ResumenTab movements={monthMovements} allMovements={movements} anchor={monthAnchor} currency={currency} locale={locale} />
         }
       </main>
 

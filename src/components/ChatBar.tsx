@@ -6,16 +6,34 @@ export interface ChatNote {
   tone: 'ok' | 'error'
 }
 
+/** Rotating hints so the input always teaches what it understands. */
+const EXAMPLES = [
+  'café 1.200',
+  'super 25 lucas',
+  'cobré 180k',
+  'nafta 40 mil ayer',
+  'uber 6.500 y almuerzo 14k',
+]
+
 interface Props {
   busy: boolean
   note: ChatNote | null
+  /** Optional trailing action inside the note, e.g. "Deshacer". */
+  noteAction?: { label: string; run: () => void } | null
   onSubmit: (text: string) => void
   /** Reports the bar's rendered height so the list can reserve room under it. */
   onHeightChange: (height: number) => void
 }
 
-export function ChatBar({ busy, note, onSubmit, onHeightChange }: Props) {
+export function ChatBar({ busy, note, noteAction, onSubmit, onHeightChange }: Props) {
   const [value, setValue] = useState('')
+  const [example, setExample] = useState(0)
+
+  useEffect(() => {
+    if (value) return
+    const t = setInterval(() => setExample((i) => (i + 1) % EXAMPLES.length), 3500)
+    return () => clearInterval(t)
+  }, [value])
   const inputRef = useRef<HTMLInputElement>(null)
   const barRef = useRef<HTMLDivElement>(null)
 
@@ -53,7 +71,12 @@ export function ChatBar({ busy, note, onSubmit, onHeightChange }: Props) {
           aria-live="polite"
         >
           <span className="chat__note-dot" aria-hidden="true" />
-          {note.text}
+          <span className="chat__note-text">{note.text}</span>
+          {noteAction && (
+            <button type="button" className="chat__note-action" onClick={noteAction.run}>
+              {noteAction.label}
+            </button>
+          )}
         </p>
       )}
 
@@ -68,7 +91,7 @@ export function ChatBar({ busy, note, onSubmit, onHeightChange }: Props) {
           type="text"
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          placeholder=""
+          placeholder={EXAMPLES[example]}
           autoComplete="off"
           autoCorrect="off"
           autoCapitalize="sentences"

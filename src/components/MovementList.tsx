@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { CATEGORIES } from '../lib/categories'
-import { formatSigned } from '../lib/format'
+import { formatSigned, parseAmountInput } from '../lib/format'
 import { fromISODate, timeLabel, todayISO, WEEKDAYS, weekdayIndex } from '../lib/dates'
 import type { Movement } from '../types'
 
@@ -12,6 +12,68 @@ interface Props {
   locale: string
   onDelete: (id: string) => void
   onUpdateCategory: (id: string, category: string) => void
+  onUpdate: (id: string, patch: Partial<Omit<Movement, 'id' | 'createdAt'>>) => void
+}
+
+/** Description, amount and date of an open row. Each field saves on blur or Enter. */
+function RowEditor({
+  movement,
+  onUpdate,
+}: {
+  movement: Movement
+  onUpdate: Props['onUpdate']
+}) {
+  const [desc, setDesc] = useState(movement.description)
+  const [amount, setAmount] = useState(String(movement.amount).replace('.', ','))
+  const [date, setDate] = useState(movement.date)
+
+  const saveDesc = () => {
+    const v = desc.trim()
+    if (v && v !== movement.description) onUpdate(movement.id, { description: v })
+    else setDesc(movement.description)
+  }
+  const saveAmount = () => {
+    const n = parseAmountInput(amount)
+    if (n > 0 && n !== movement.amount) onUpdate(movement.id, { amount: n })
+    else setAmount(String(movement.amount).replace('.', ','))
+  }
+  const blurOnEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') e.currentTarget.blur()
+  }
+
+  return (
+    <div className="row__edit">
+      <input
+        className="row__field row__field--desc"
+        value={desc}
+        onChange={(e) => setDesc(e.target.value)}
+        onBlur={saveDesc}
+        onKeyDown={blurOnEnter}
+        aria-label="Descripción"
+        enterKeyHint="done"
+      />
+      <input
+        className="row__field row__field--amount"
+        value={amount}
+        onChange={(e) => setAmount(e.target.value)}
+        onBlur={saveAmount}
+        onKeyDown={blurOnEnter}
+        inputMode="decimal"
+        aria-label="Monto"
+        enterKeyHint="done"
+      />
+      <input
+        className="row__field row__field--date"
+        type="date"
+        value={date}
+        onChange={(e) => {
+          setDate(e.target.value)
+          if (/^\d{4}-\d{2}-\d{2}$/.test(e.target.value)) onUpdate(movement.id, { date: e.target.value })
+        }}
+        aria-label="Fecha"
+      />
+    </div>
+  )
 }
 
 function dayHeading(iso: string): string {
@@ -37,6 +99,7 @@ export function MovementList({
   locale,
   onDelete,
   onUpdateCategory,
+  onUpdate,
 }: Props) {
   const [openId, setOpenId] = useState<string | null>(null)
 
@@ -107,6 +170,8 @@ export function MovementList({
                     {formatSigned(m.amount, m.kind, currency, locale)}
                   </span>
                 </button>
+
+                {isOpen && <RowEditor movement={m} onUpdate={onUpdate} />}
 
                 {isOpen && (
                   <div className="row__actions">
