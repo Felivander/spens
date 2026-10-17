@@ -80,20 +80,62 @@ export function BalanceCard({ balance, todayCount, currency, locale, owedToMe, i
       </div>
 
       {(owedToMe > 0 || iOwe > 0) && (
-        <button type="button" className="balance__debts" onClick={onOpenDebts}>
-          {owedToMe > 0 && (
-            <span>
-              Te deben <strong className="is-in">{formatMoney(owedToMe, currency, locale)}</strong>
-            </span>
-          )}
-          {owedToMe > 0 && iOwe > 0 && <span aria-hidden="true">·</span>}
-          {iOwe > 0 && (
-            <span>
-              Debés <strong>{formatMoney(iOwe, currency, locale)}</strong>
-            </span>
-          )}
-        </button>
+        <DebtScale owedToMe={owedToMe} iOwe={iOwe} currency={currency} locale={locale} onOpen={onOpenDebts} />
       )}
     </section>
+  )
+}
+
+const TICKS = 21
+
+/**
+ * A Braun-style dial scale: zero sits at the centre, what I owe pulls the
+ * needle left, what I'm owed pulls it right. The needle is the only orange
+ * mark, so it reads like the pointer on a T3 radio rather than a badge.
+ */
+function DebtScale({
+  owedToMe,
+  iOwe,
+  currency,
+  locale,
+  onOpen,
+}: {
+  owedToMe: number
+  iOwe: number
+  currency: string
+  locale: string
+  onOpen: () => void
+}) {
+  const total = owedToMe + iOwe
+  // 0% = all debt is mine, 100% = all is owed to me, 50% = they cancel out.
+  const needle = total > 0 ? 50 + ((owedToMe - iOwe) / total) * 50 : 50
+  const owe = formatMoney(iOwe, currency, locale)
+  const owed = formatMoney(owedToMe, currency, locale)
+
+  return (
+    <button
+      type="button"
+      className="dscale"
+      onClick={onOpen}
+      aria-label={`Te deben ${owed}, debés ${owe}. Ver préstamos`}
+    >
+      <span className="dscale__labels" aria-hidden="true">
+        <span>
+          debés <span className="dscale__num">{owe}</span>
+        </span>
+        <span>
+          te deben <span className="dscale__num">{owed}</span>
+        </span>
+      </span>
+      <span className="dscale__track" aria-hidden="true">
+        {Array.from({ length: TICKS }, (_, i) => (
+          <span
+            key={i}
+            className={`dscale__tick${i === (TICKS - 1) / 2 ? ' dscale__tick--zero' : i % 5 === 0 ? ' dscale__tick--major' : ''}`}
+          />
+        ))}
+        <span className="dscale__needle" style={{ insetInlineStart: `${needle}%` }} />
+      </span>
+    </button>
   )
 }

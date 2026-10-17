@@ -1471,25 +1471,63 @@
 
 /* ----------------------------------------------------------------- loans -- */
 
-.balance__debts {
-  display: inline-flex;
-  gap: 0.375rem;
-  margin-block-start: 0.875rem;
-  padding: 0.3125rem 0.75rem;
-  border-radius: var(--r-pill);
-  font-size: var(--text-label);
-  color: var(--ink-muted);
-  background: var(--paper);
-  border: 1px solid var(--rule);
-  font-variant-numeric: tabular-nums;
+.dscale {
+  display: block;
+  inline-size: 100%;
+  margin-block-start: 1.125rem;
+  padding-inline: 0.75rem;
+  text-align: start;
 }
 
-.balance__debts strong {
+.dscale__labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-micro);
+  letter-spacing: 0.04em;
+  color: var(--ink-muted);
+}
+
+.dscale__num {
+  margin-inline-start: 0.25rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
   color: var(--ink);
 }
 
-.balance__debts .is-in {
-  color: var(--accent-text);
+/* Ticks hang from a common baseline, like the printed scale on a Braun dial. */
+.dscale__track {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  block-size: 0.875rem;
+  margin-block-start: 0.375rem;
+}
+
+.dscale__tick {
+  inline-size: 1px;
+  block-size: 0.3125rem;
+  background: var(--rule-strong);
+}
+
+.dscale__tick--major {
+  block-size: 0.5rem;
+  background: var(--ink-faint);
+}
+
+.dscale__tick--zero {
+  block-size: 0.875rem;
+  background: var(--ink);
+}
+
+.dscale__needle {
+  position: absolute;
+  inset-block: 0;
+  inline-size: 2px;
+  margin-inline-start: -1px;
+  border-radius: 1px;
+  background: var(--accent);
+  transition: inset-inline-start var(--base) var(--ease);
 }
 
 .debts {
