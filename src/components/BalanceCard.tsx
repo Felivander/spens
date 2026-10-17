@@ -9,9 +9,12 @@ interface Props {
   todayCount: number
   currency: string
   locale: string
+  owedToMe: number
+  iOwe: number
+  onOpenDebts: () => void
 }
 
-export function BalanceCard({ balance, todayCount, currency, locale }: Props) {
+export function BalanceCard({ balance, todayCount, currency, locale, owedToMe, iOwe, onOpenDebts }: Props) {
   // Which "lap" we're on and where in the current lap we are.
   const lap = Math.floor(todayCount / DOT_COUNT)
   const pos = todayCount % DOT_COUNT  // 0 means just completed a full lap
@@ -75,6 +78,22 @@ export function BalanceCard({ balance, todayCount, currency, locale }: Props) {
           )
         })}
       </div>
+
+      {(owedToMe > 0 || iOwe > 0) && (
+        <button type="button" className="balance__debts" onClick={onOpenDebts}>
+          {owedToMe > 0 && (
+            <span>
+              Te deben <strong className="is-in">{formatMoney(owedToMe, currency, locale)}</strong>
+            </span>
+          )}
+          {owedToMe > 0 && iOwe > 0 && <span aria-hidden="true">·</span>}
+          {iOwe > 0 && (
+            <span>
+              Debés <strong>{formatMoney(iOwe, currency, locale)}</strong>
+            </span>
+          )}
+        </button>
+      )}
     </section>
   )
 }

@@ -7,6 +7,8 @@ import { HistoryPage } from './components/HistorySheet'
 import { MovementList } from './components/MovementList'
 import { RangeNav } from './components/RangeNav'
 import { SettingsSheet } from './components/SettingsSheet'
+import { DebtsSheet } from './components/DebtsSheet'
+import { debtTotals, isDebt, settleMovement } from './lib/debts'
 import { DesktopDashboard } from './components/desktop/DesktopDashboard'
 import { useMediaQuery } from './lib/useMediaQuery'
 import { HistoryIcon, MenuIcon } from './components/icons'
@@ -60,6 +62,7 @@ export default function App() {
   const [undoMovement, setUndoMovement] = useState<Movement | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [debtsOpen, setDebtsOpen] = useState(false)
   /** Measured height of the floating chat bar, so the list can clear it. */
   const [chatHeight, setChatHeight] = useState(68)
   const isDesktop = useMediaQuery('(min-width: 1024px)')
@@ -109,7 +112,7 @@ export default function App() {
 
   const today = todayISO()
   const todayCount = useMemo(
-    () => movements.filter((m) => m.date === today && m.kind === 'gasto').length,
+    () => movements.filter((m) => m.date === today && m.kind === 'gasto' && !isDebt(m)).length,
     [movements, today],
   )
 
@@ -140,7 +143,7 @@ export default function App() {
   const visibleNet = useMemo(
     () =>
       visible.reduce(
-        (sum, m) => sum + (m.kind === 'ingreso' ? m.amount : -m.amount),
+        (sum, m) => (isDebt(m) ? sum : sum + (m.kind === 'ingreso' ? m.amount : -m.amount)),
         0,
       ),
     [visible],
@@ -261,6 +264,17 @@ export default function App() {
     [user],
   )
 
+  const debts = useMemo(() => debtTotals(movements), [movements])
+
+  const handleAddMovement = useCallback(
+    (movement: Omit<Movement, 'id' | 'createdAt'>) => {
+      const created: Movement = { ...movement, id: newId(), createdAt: Date.now() }
+      setMovements((prev) => [...prev, created])
+      if (user) void syncMovementsToCloud(user.id, [created])
+    },
+    [user],
+  )
+
   const handleRestoreMovement = useCallback(
     (movement: Movement) => {
       setMovements((prev) => [...prev, movement])
@@ -314,6 +328,16 @@ export default function App() {
     />
   )
 
+  const debtsSheet = debtsOpen && (
+    <DebtsSheet
+      movements={movements}
+      currency={currencySymbol}
+      locale={settings.locale}
+      onSettle={(b) => handleAddMovement(settleMovement(b, todayISO()))}
+      onClose={() => setDebtsOpen(false)}
+    />
+  )
+
   if (isDesktop) {
     return (
       <>
@@ -326,9 +350,12 @@ export default function App() {
           onUpdateMovement={handleUpdateMovement}
           onDeleteMovement={handleDelete}
           onRestoreMovement={handleRestoreMovement}
+          onAddMovement={handleAddMovement}
           onOpenSettings={() => setSheetOpen(true)}
+          onOpenDebts={() => setDebtsOpen(true)}
         />
         {settingsSheet}
+        {debtsSheet}
       </>
     )
   }
@@ -363,6 +390,9 @@ export default function App() {
         todayCount={todayCount}
         currency={currencySymbol}
         locale={settings.locale}
+        owedToMe={debts.owedToMe}
+        iOwe={debts.iOwe}
+        onOpenDebts={() => setDebtsOpen(true)}
       />
 
       <RangeNav
@@ -422,6 +452,7 @@ export default function App() {
       />
 
       {settingsSheet}
+      {debtsSheet}
 
       {historyOpen && (
         <HistoryPage

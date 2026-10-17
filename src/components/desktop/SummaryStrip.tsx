@@ -2,12 +2,14 @@ import { useMemo } from 'react'
 import { fromISODate, MONTHS } from '../../lib/dates'
 import { formatMoney } from '../../lib/format'
 import type { Movement } from '../../types'
+import { debtTotals, isDebt } from '../../lib/debts'
 
 interface Props {
   movements: Movement[]
   anchor: Date
   currency: string
   locale: string
+  onOpenDebts: () => void
 }
 
 /**
@@ -15,7 +17,7 @@ interface Props {
  * previous month is cut at the same day-of-month while the month is still
  * running, so day 7 is never judged against a full 30-day month.
  */
-export function SummaryStrip({ movements, anchor, currency, locale }: Props) {
+export function SummaryStrip({ movements, anchor, currency, locale, onOpenDebts }: Props) {
   const s = useMemo(() => {
     const now = new Date()
     const y = anchor.getFullYear()
@@ -34,8 +36,11 @@ export function SummaryStrip({ movements, anchor, currency, locale }: Props) {
     for (const m of movements) {
       balance += m.kind === 'ingreso' ? m.amount : -m.amount
       const d = fromISODate(m.date)
-      if (d.getFullYear() === y && d.getMonth() === mo) {
-        count += 1
+      const inMonth = d.getFullYear() === y && d.getMonth() === mo
+      if (inMonth) count += 1
+      // Loans move cash (balance above) but are neither spending nor income.
+      if (isDebt(m)) continue
+      if (inMonth) {
         if (m.kind === 'gasto') gastos += m.amount
         else ingresos += m.amount
       } else if (
@@ -62,6 +67,7 @@ export function SummaryStrip({ movements, anchor, currency, locale }: Props) {
       delta: prevGastos > 0 ? (gastos - prevGastos) / prevGastos : null,
       prevLabel: MONTHS[prev.getMonth()].slice(0, 3),
       isCurrent,
+      ...debtTotals(movements),
     }
   }, [movements, anchor])
 
@@ -102,6 +108,22 @@ export function SummaryStrip({ movements, anchor, currency, locale }: Props) {
           <dd>{money(Math.round(s.projected))}</dd>
         </div>
       )}
+      <div className="dk-stat">
+        <dt>Te deben</dt>
+        <dd>
+          <button type="button" className={`dk-stat__link${s.owedToMe > 0 ? ' dk-pos' : ''}`} onClick={onOpenDebts} title="Ver préstamos">
+            {money(s.owedToMe)}
+          </button>
+        </dd>
+      </div>
+      <div className="dk-stat">
+        <dt>Debés</dt>
+        <dd>
+          <button type="button" className="dk-stat__link" onClick={onOpenDebts} title="Ver préstamos">
+            {money(s.iOwe)}
+          </button>
+        </dd>
+      </div>
       <div className="dk-stat">
         <dt>Movimientos</dt>
         <dd>{s.count}</dd>

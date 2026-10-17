@@ -96,6 +96,7 @@ interface SupabaseMovementRow {
   category: string
   date: string
   created_at: number
+  person?: string | null
 }
 
 /**
@@ -123,6 +124,7 @@ export async function fetchRemoteMovements(userId: string, settings?: Settings):
     category: row.category,
     date: row.date,
     createdAt: Number(row.created_at),
+    ...(row.person ? { person: row.person } : {}),
   }))
 }
 
@@ -146,6 +148,9 @@ export async function syncMovementsToCloud(
     category: m.category,
     date: m.date,
     created_at: m.createdAt,
+    // Only loans carry the column, so regular rows keep syncing even on a
+    // database that hasn't run the `person` migration yet.
+    ...(m.person ? { person: m.person } : {}),
   }))
 
   const { error } = await client.from('movements').upsert(rows as any, {

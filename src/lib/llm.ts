@@ -1,6 +1,7 @@
 import { CATEGORIES, guessCategory } from './categories'
 import { todayISO, WEEKDAYS, weekdayIndex } from './dates'
 import { parseLocal } from './parse'
+import { DEBT_CATEGORY } from './debts'
 import type { ParsedResult, Settings } from '../types'
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
@@ -33,7 +34,8 @@ Respondé SIEMPRE con un único objeto JSON, sin texto alrededor y sin bloques d
       "monto": number,            // positivo siempre, el signo lo da "tipo"
       "descripcion": string,      // breve, 1 a 4 palabras, en minúscula salvo nombres propios
       "categoria": ${CATEGORIES.map((c) => `"${c}"`).join(' | ')},
-      "fecha": "yyyy-mm-dd"
+      "fecha": "yyyy-mm-dd",
+      "persona": string | null    // solo en préstamos entre personas, si no null
     }
   ],
   "respuesta": string             // confirmación de una línea, máximo 8 palabras
@@ -47,7 +49,13 @@ Reglas:
 - Resolvé fechas relativas: "ayer", "anteayer", "el martes", "12/3". Sin indicación, usá hoy.
 - Elegí la categoría más específica posible. Si ninguna encaja, usá "Otros".
 - Si el mensaje no contiene ningún monto, devolvé "movimientos": [] y explicá en una línea qué falta.
-- No inventes montos, fechas ni movimientos que la persona no mencionó.`
+- No inventes montos, fechas ni movimientos que la persona no mencionó.
+- Préstamos entre personas: completá "persona" con el nombre (capitalizado) y "tipo" según hacia dónde va la plata:
+  - "le presté 20k a Juan" o "le devolví 10k a Juan" → "gasto" (la plata sale).
+  - "Juan me prestó 10k" o "Juan me devolvió 5k" → "ingreso" (la plata entra).
+  - La "descripcion" queda "Préstamo a Juan", "Le devolví a Juan", "Préstamo de Juan" o "Devolución de Juan". La "categoria" no importa.
+  - Si se nombra un préstamo sin decir a quién ("le presté 20k"), devolvé "movimientos": [] y preguntá a quién.
+  - "me devolvieron" o "me pagaron" sin una persona concreta (reintegros, clientes) NO es préstamo: "persona" es null.`
 }
 
 interface RawMovement {
@@ -56,6 +64,7 @@ interface RawMovement {
   descripcion?: unknown
   categoria?: unknown
   fecha?: unknown
+  persona?: unknown
 }
 
 /** Models occasionally wrap JSON in prose or fences even in JSON mode. */
@@ -111,12 +120,16 @@ function coerce(payload: unknown, defaultDate?: string): ParsedResult {
       ? (m.fecha === todayISO() && defaultDate ? defaultDate : m.fecha)
       : (defaultDate || todayISO())
 
+    const person =
+      typeof m.persona === 'string' && m.persona.trim() ? m.persona.trim().slice(0, 40) : undefined
+
     movements.push({
       kind,
       amount: Math.abs(amount),
       description: description.charAt(0).toUpperCase() + description.slice(1),
-      category,
+      category: person ? DEBT_CATEGORY : category,
       date,
+      ...(person ? { person } : {}),
     })
   }
 

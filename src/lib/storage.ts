@@ -74,7 +74,8 @@ function isMovement(v: unknown): v is Movement {
     typeof m.description === 'string' &&
     typeof m.category === 'string' &&
     typeof m.date === 'string' &&
-    typeof m.createdAt === 'number'
+    typeof m.createdAt === 'number' &&
+    (m.person === undefined || typeof m.person === 'string')
   )
 }
 

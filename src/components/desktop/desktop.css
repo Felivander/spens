@@ -813,3 +813,41 @@ select:focus-visible,
     scale: 0.98;
   }
 }
+
+/* ----------------------------------------------------------------- loans -- */
+
+.dk-stat__link {
+  font: inherit;
+  color: inherit;
+  border-radius: 4px;
+}
+
+.dk-stat__link:hover {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.dk-debt {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.dk-debt .dk-cats__row {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.dk-debt__settle {
+  flex: 0 0 auto;
+  block-size: 1.5rem;
+  padding-inline: 0.5rem;
+  font-size: 0.6875rem;
+}
+
+.dk-cell--person {
+  font-weight: 600;
+  color: var(--ink);
+}

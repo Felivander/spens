@@ -12,8 +12,12 @@ create table if not exists public.movements (
   description text not null,
   category text not null,
   date text not null,
-  created_at bigint not null
+  created_at bigint not null,
+  person text -- set on loans between people; null for regular movements
 );
+
+-- 1b. Migration for databases created before loans existed (safe to re-run)
+alter table public.movements add column if not exists person text;
 
 -- 2. Enable Row Level Security (RLS)
 alter table public.movements enable row level security;

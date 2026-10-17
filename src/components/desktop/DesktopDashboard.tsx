@@ -10,6 +10,8 @@ import { CategoryBreakdown } from './CategoryBreakdown'
 import { Ledger, type KindFilter } from './Ledger'
 import { fromISODate, isSameMonth, MONTHS, todayISO, WEEKDAYS, weekdayIndex } from '../../lib/dates'
 import './desktop.css'
+import { debtBalances, isSettled, settleMovement } from '../../lib/debts'
+import { formatMoney } from '../../lib/format'
 
 type Patch = Partial<Omit<Movement, 'id' | 'createdAt'>>
 
@@ -22,7 +24,9 @@ export interface DesktopDashboardProps {
   onUpdateMovement: (id: string, patch: Patch) => void
   onDeleteMovement: (id: string) => void
   onRestoreMovement: (m: Movement) => void
+  onAddMovement: (m: Omit<Movement, 'id' | 'createdAt'>) => void
   onOpenSettings: () => void
+  onOpenDebts: () => void
 }
 
 /** True when the keystroke belongs to a field, not to the page shortcuts. */
@@ -40,11 +44,14 @@ export function DesktopDashboard({
   onUpdateMovement,
   onDeleteMovement,
   onRestoreMovement,
+  onAddMovement,
   onOpenSettings,
+  onOpenDebts,
 }: DesktopDashboardProps) {
   const [anchor, setAnchor] = useState(() => new Date())
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
   const [category, setCategory] = useState<string | null>(null)
+  const [person, setPerson] = useState<string | null>(null)
   const [kind, setKind] = useState<KindFilter>('todos')
   const [search, setSearch] = useState('')
 
@@ -56,10 +63,16 @@ export function DesktopDashboard({
   const cmdRef = useRef<HTMLInputElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
 
+  // A person filter spans every month — a loan from March is still owed today.
   const monthMovements = useMemo(
     () => movements.filter((m) => isSameMonth(m.date, anchor)),
     [movements, anchor],
   )
+  const ledgerMovements = useMemo(
+    () => (person ? movements : monthMovements),
+    [person, movements, monthMovements],
+  )
+  const openDebts = useMemo(() => debtBalances(movements).filter((b) => !isSettled(b)), [movements])
 
   const now = new Date()
   const isCurrentMonth = anchor.getFullYear() === now.getFullYear() && anchor.getMonth() === now.getMonth()
@@ -130,6 +143,7 @@ export function DesktopDashboard({
       else if (e.key === 'Escape') {
         setSelectedDay(null)
         setCategory(null)
+        setPerson(null)
         setKind('todos')
         setSearch('')
       }
@@ -181,14 +195,22 @@ export function DesktopDashboard({
         </button>
       </header>
 
-      <SummaryStrip movements={movements} anchor={anchor} currency={currency} locale={locale} />
+      <SummaryStrip
+        movements={movements}
+        anchor={anchor}
+        currency={currency}
+        locale={locale}
+        onOpenDebts={onOpenDebts}
+      />
 
       <div className="dk-body">
         <Ledger
           ref={searchRef}
-          movements={monthMovements}
+          movements={ledgerMovements}
           selectedDay={selectedDay}
           category={category}
+          person={person}
+          onClearPerson={() => setPerson(null)}
           kind={kind}
           search={search}
           onSearch={setSearch}
@@ -221,6 +243,52 @@ export function DesktopDashboard({
               locale={locale}
             />
           </section>
+
+          {openDebts.length > 0 && (
+            <section className="dk-panel">
+              <h2 className="dk-panel__title">
+                Préstamos
+                <button type="button" className="dk-link" onClick={onOpenDebts}>
+                  Ver todo
+                </button>
+              </h2>
+              <ul className="dk-cats">
+                {openDebts.map((b) => (
+                  <li key={b.key} className="dk-debt">
+                    <button
+                      type="button"
+                      className={`dk-cats__row${person === b.key ? ' dk-cats__row--on' : ''}`}
+                      aria-pressed={person === b.key}
+                      onClick={() => {
+                        const next = person === b.key ? null : b.key
+                        setPerson(next)
+                        // Loans can be months old: show them all, not just this month.
+                        if (next) setKind('prestamos')
+                      }}
+                      title={b.net > 0 ? `${b.name} te debe` : `Le debés a ${b.name}`}
+                    >
+                      <span className="dk-cats__name">{b.name}</span>
+                      <span className="dk-cats__pct">{b.net > 0 ? 'te debe' : 'debés'}</span>
+                      <span className={`dk-cats__amt${b.net > 0 ? ' dk-pos' : ''}`}>
+                        {formatMoney(Math.abs(b.net), currency, locale)}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      className="dk-btn dk-debt__settle"
+                      onClick={() => {
+                        onAddMovement(settleMovement(b, todayISO()))
+                        setNote({ text: `Saldado con ${b.name}.`, tone: 'ok' })
+                      }}
+                      title={`Registrar que se saldó la deuda con ${b.name}`}
+                    >
+                      Saldar
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           <section className="dk-panel">
             <h2 className="dk-panel__title">

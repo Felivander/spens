@@ -85,6 +85,20 @@ const cases = [
   ['zari veterinaria 45000', [{ amount: 45000, category: 'Mascotas' }]],
   ['hamburguesa 12000', [{ amount: 12000, category: 'Comida' }]],
 
+  // Loans between people: kind is the cash direction, person carries the debt
+  ['le presté 20k a Juan', [{ amount: 20000, kind: 'gasto', person: 'Juan', category: 'Préstamos' }]],
+  ['presté 5 lucas a martina', [{ amount: 5000, kind: 'gasto', person: 'Martina' }]],
+  ['le presté a Juan Pérez 15000', [{ amount: 15000, kind: 'gasto', person: 'Juan Pérez' }]],
+  ['juan me devolvió 5k', [{ amount: 5000, kind: 'ingreso', person: 'Juan' }]],
+  ['me devolvió Juan 3.000 ayer', [{ amount: 3000, kind: 'ingreso', person: 'Juan', date: dayOffset(-1) }]],
+  ['Pedro me prestó 10k', [{ amount: 10000, kind: 'ingreso', person: 'Pedro' }]],
+  ['me prestó pedro 2 lucas', [{ amount: 2000, kind: 'ingreso', person: 'Pedro' }]],
+  ['le devolví 10k a Pedro', [{ amount: 10000, kind: 'gasto', person: 'Pedro' }]],
+  ['le presté 5k a Juan y café 1200', [{ amount: 5000, person: 'Juan' }, { amount: 1200, kind: 'gasto', person: null, category: 'Comida' }]],
+  ['me devolvieron 3k', [{ amount: 3000, kind: 'ingreso', person: null }]],
+  ['el cliente me pagó 50k', [{ amount: 50000, kind: 'ingreso', person: null }]],
+  ['le presté 20k', []],
+
   // Must record nothing rather than guess
   ['hola', []],
   ['dos cafés', []],
@@ -108,6 +122,8 @@ for (const [input, expected] of cases) {
       if (e.category && g.category !== e.category)
         problems.push(`categoría "${g.category}" ≠ "${e.category}"`)
       if (e.date && g.date !== e.date) problems.push(`fecha ${g.date} ≠ ${e.date}`)
+      if (e.person !== undefined && (g.person ?? null) !== e.person)
+        problems.push(`persona "${g.person ?? ''}" ≠ "${e.person ?? ''}"`)
     })
   }
 

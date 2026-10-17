@@ -5,6 +5,7 @@ import { fromISODate, isSameMonth, monthLabel, MONTHS, todayISO, WEEKDAYS, weekd
 import { CATEGORIES } from '../lib/categories'
 import { ChevronLeft, ChevronRight } from './icons'
 import type { Movement } from '../types'
+import { isDebt } from '../lib/debts'
 
 interface Props {
   movements: Movement[]
@@ -78,7 +79,7 @@ function insight(all: Movement[], anchor: Date, gastos: number) {
 
   let prevGastos = 0
   for (const m of all) {
-    if (m.kind !== 'gasto') continue
+    if (m.kind !== 'gasto' || isDebt(m)) continue
     const d = fromISODate(m.date)
     if (d.getFullYear() === prev.getFullYear() && d.getMonth() === prev.getMonth() && d.getDate() <= cutDay) {
       prevGastos += m.amount
@@ -92,12 +93,15 @@ function insight(all: Movement[], anchor: Date, gastos: number) {
 }
 
 function ResumenTab({
-  movements,
+  movements: withDebts,
   allMovements,
   anchor,
   currency,
   locale,
 }: Omit<Props, 'onClose'> & { allMovements: Movement[]; anchor: Date }) {
+  // Loans move cash but are neither spending nor income.
+  const movements = useMemo(() => withDebts.filter((m) => !isDebt(m)), [withDebts])
+
   const stats = useMemo(() => {
     const byCategory: Record<string, { gastos: number; ingresos: number }> = {}
 

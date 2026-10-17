@@ -4,8 +4,9 @@ import { fromISODate, MONTHS, timeLabel, todayISO, toISODate, addDays, WEEKDAYS,
 import { formatMoney, formatSigned, parseAmountInput } from '../../lib/format'
 import type { Kind, Movement } from '../../types'
 import { CloseIcon, TrashIcon } from '../icons'
+import { isDebt, personKey } from '../../lib/debts'
 
-export type KindFilter = 'todos' | Kind
+export type KindFilter = 'todos' | Kind | 'prestamos'
 type SortKey = 'date' | 'description' | 'category' | 'amount'
 type Patch = Partial<Omit<Movement, 'id' | 'createdAt'>>
 
@@ -14,6 +15,9 @@ interface Props {
   movements: Movement[]
   selectedDay: string | null
   category: string | null
+  /** personKey of the person to show, or null. */
+  person: string | null
+  onClearPerson: () => void
   kind: KindFilter
   search: string
   onSearch: (q: string) => void
@@ -44,9 +48,9 @@ function shortDay(iso: string): string {
 function downloadCSV(rows: Movement[], name: string) {
   const esc = (s: string) => `"${s.replace(/"/g, '""')}"`
   const lines = [
-    'fecha;tipo;descripcion;categoria;monto',
+    'fecha;tipo;descripcion;categoria;persona;monto',
     ...rows.map((m) =>
-      [m.date, m.kind, esc(m.description), esc(m.category), (m.kind === 'gasto' ? -m.amount : m.amount).toString().replace('.', ',')].join(';'),
+      [m.date, m.kind, esc(m.description), esc(m.category), esc(m.person ?? ''), (m.kind === 'gasto' ? -m.amount : m.amount).toString().replace('.', ',')].join(';'),
     ),
   ]
   // BOM so Excel opens accents correctly.
@@ -64,6 +68,8 @@ export const Ledger = forwardRef<HTMLInputElement, Props>(function Ledger(
     movements,
     selectedDay,
     category,
+    person,
+    onClearPerson,
     kind,
     search,
     onSearch,
@@ -80,7 +86,7 @@ export const Ledger = forwardRef<HTMLInputElement, Props>(function Ledger(
   searchRef,
 ) {
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'date', dir: -1 })
-  const [editing, setEditing] = useState<{ id: string; field: 'description' | 'amount' | 'date' } | null>(null)
+  const [editing, setEditing] = useState<{ id: string; field: 'description' | 'amount' | 'date' | 'person' } | null>(null)
   const [draft, setDraft] = useState('')
   /** Escape unmounts the input; a blur fired on removal must not save. */
   const cancelled = useRef(false)
@@ -91,8 +97,13 @@ export const Ledger = forwardRef<HTMLInputElement, Props>(function Ledger(
       (m) =>
         (!selectedDay || m.date === selectedDay) &&
         (!category || m.category === category) &&
-        (kind === 'todos' || m.kind === kind) &&
-        (!q || m.description.toLowerCase().includes(q) || m.category.toLowerCase().includes(q)),
+        (!person || (m.person !== undefined && personKey(m.person) === person)) &&
+        (kind === 'todos' ||
+          (kind === 'prestamos' ? isDebt(m) : m.kind === kind && !isDebt(m))) &&
+        (!q ||
+          m.description.toLowerCase().includes(q) ||
+          m.category.toLowerCase().includes(q) ||
+          (m.person ?? '').toLowerCase().includes(q)),
     )
     const { key, dir } = sort
     return list.sort((a, b) => {
@@ -103,12 +114,13 @@ export const Ledger = forwardRef<HTMLInputElement, Props>(function Ledger(
       if (c === 0) c = a.date.localeCompare(b.date) || a.createdAt - b.createdAt
       return c * dir
     })
-  }, [movements, selectedDay, category, kind, search, sort])
+  }, [movements, selectedDay, category, person, kind, search, sort])
 
   const totals = useMemo(() => {
     let out = 0
     let inc = 0
     for (const m of rows) {
+      if (isDebt(m)) continue
       if (m.kind === 'gasto') out += m.amount
       else inc += m.amount
     }
@@ -119,23 +131,35 @@ export const Ledger = forwardRef<HTMLInputElement, Props>(function Ledger(
   const grouped = sort.key === 'date'
   const dayNets = useMemo(() => {
     const map: Record<string, number> = {}
-    for (const m of rows) map[m.date] = (map[m.date] ?? 0) + (m.kind === 'ingreso' ? m.amount : -m.amount)
+    for (const m of rows) {
+      if (isDebt(m)) continue
+      map[m.date] = (map[m.date] ?? 0) + (m.kind === 'ingreso' ? m.amount : -m.amount)
+    }
     return map
   }, [rows])
 
   const toggleSort = (key: SortKey) =>
     setSort((s) => (s.key === key ? { key, dir: s.dir === 1 ? -1 : 1 } : { key, dir: key === 'date' || key === 'amount' ? -1 : 1 }))
 
-  const startEdit = (m: Movement, field: 'description' | 'amount' | 'date') => {
+  const startEdit = (m: Movement, field: 'description' | 'amount' | 'date' | 'person') => {
     cancelled.current = false
     setEditing({ id: m.id, field })
-    setDraft(field === 'amount' ? String(m.amount).replace('.', ',') : field === 'date' ? m.date : m.description)
+    setDraft(
+      field === 'amount'
+        ? String(m.amount).replace('.', ',')
+        : field === 'date'
+          ? m.date
+          : field === 'person'
+            ? (m.person ?? '')
+            : m.description,
+    )
   }
 
   const commit = () => {
     if (!editing || cancelled.current) return
     const { id, field } = editing
     if (field === 'description' && draft.trim()) onUpdate(id, { description: draft.trim() })
+    if (field === 'person' && draft.trim()) onUpdate(id, { person: draft.trim() })
     if (field === 'date' && /^\d{4}-\d{2}-\d{2}$/.test(draft)) onUpdate(id, { date: draft })
     if (field === 'amount') {
       const n = parseAmountInput(draft)
@@ -153,7 +177,10 @@ export const Ledger = forwardRef<HTMLInputElement, Props>(function Ledger(
   }
 
   const arrow = (key: SortKey) => (sort.key === key ? (sort.dir === 1 ? ' ↑' : ' ↓') : '')
-  const hasFilters = Boolean(selectedDay || category || kind !== 'todos' || search)
+  const hasFilters = Boolean(selectedDay || category || person || kind !== 'todos' || search)
+  const personName = person
+    ? movements.find((m) => m.person && personKey(m.person) === person)?.person ?? person
+    : null
 
   let lastDay = ''
 
@@ -175,9 +202,9 @@ export const Ledger = forwardRef<HTMLInputElement, Props>(function Ledger(
           }}
         />
         <div className="dk-seg" role="group" aria-label="Tipo">
-          {(['todos', 'gasto', 'ingreso'] as const).map((k) => (
+          {(['todos', 'gasto', 'ingreso', 'prestamos'] as const).map((k) => (
             <button key={k} type="button" aria-pressed={kind === k} onClick={() => onKind(k)}>
-              {k === 'todos' ? 'Todos' : k === 'gasto' ? 'Gastos' : 'Ingresos'}
+              {k === 'todos' ? 'Todos' : k === 'gasto' ? 'Gastos' : k === 'ingreso' ? 'Ingresos' : 'Préstamos'}
             </button>
           ))}
         </div>
@@ -185,6 +212,14 @@ export const Ledger = forwardRef<HTMLInputElement, Props>(function Ledger(
           <span className="dk-chip">
             {dayHeading(selectedDay)}
             <button type="button" onClick={onClearDay} aria-label="Quitar filtro de día">
+              <CloseIcon size={12} strokeWidth={2} />
+            </button>
+          </span>
+        )}
+        {personName && (
+          <span className="dk-chip">
+            {personName}
+            <button type="button" onClick={onClearPerson} aria-label="Quitar filtro de persona">
               <CloseIcon size={12} strokeWidth={2} />
             </button>
           </span>
@@ -296,6 +331,28 @@ export const Ledger = forwardRef<HTMLInputElement, Props>(function Ledger(
                       )}
                     </td>
                     <td>
+                      {isDebt(m) ? (
+                        isEd('person') ? (
+                          <input
+                            autoFocus
+                            className="dk-cell-input"
+                            value={draft}
+                            onChange={(e) => setDraft(e.target.value)}
+                            onBlur={commit}
+                            onKeyDown={editKeys}
+                            aria-label="Persona"
+                          />
+                        ) : (
+                          <button
+                            type="button"
+                            className="dk-cell dk-cell--person"
+                            onClick={() => startEdit(m, 'person')}
+                            title={m.kind === 'gasto' ? `Le diste plata a ${m.person}` : `${m.person} te dio plata`}
+                          >
+                            {m.kind === 'gasto' ? '→' : '←'} {m.person}
+                          </button>
+                        )
+                      ) : (
                       <select
                         className="dk-cell dk-cell--select"
                         value={m.category}
@@ -307,6 +364,7 @@ export const Ledger = forwardRef<HTMLInputElement, Props>(function Ledger(
                           <option key={c} value={c}>{c}</option>
                         ))}
                       </select>
+                      )}
                     </td>
                     <td>
                       <button

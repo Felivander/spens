@@ -3,6 +3,7 @@ import { CATEGORIES } from '../lib/categories'
 import { formatSigned, parseAmountInput } from '../lib/format'
 import { fromISODate, timeLabel, todayISO, WEEKDAYS, weekdayIndex } from '../lib/dates'
 import type { Movement } from '../types'
+import { isDebt } from '../lib/debts'
 
 interface Props {
   movements: Movement[]
@@ -26,6 +27,7 @@ function RowEditor({
   const [desc, setDesc] = useState(movement.description)
   const [amount, setAmount] = useState(String(movement.amount).replace('.', ','))
   const [date, setDate] = useState(movement.date)
+  const [person, setPerson] = useState(movement.person ?? '')
 
   const saveDesc = () => {
     const v = desc.trim()
@@ -36,6 +38,11 @@ function RowEditor({
     const n = parseAmountInput(amount)
     if (n > 0 && n !== movement.amount) onUpdate(movement.id, { amount: n })
     else setAmount(String(movement.amount).replace('.', ','))
+  }
+  const savePerson = () => {
+    const v = person.trim()
+    if (v && v !== movement.person) onUpdate(movement.id, { person: v })
+    else setPerson(movement.person ?? '')
   }
   const blurOnEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') e.currentTarget.blur()
@@ -62,6 +69,18 @@ function RowEditor({
         aria-label="Monto"
         enterKeyHint="done"
       />
+      {isDebt(movement) && (
+        <input
+          className="row__field row__field--person"
+          value={person}
+          onChange={(e) => setPerson(e.target.value)}
+          onBlur={savePerson}
+          onKeyDown={blurOnEnter}
+          aria-label="Persona"
+          placeholder="Persona"
+          enterKeyHint="done"
+        />
+      )}
       <input
         className="row__field row__field--date"
         type="date"
@@ -160,7 +179,7 @@ export function MovementList({
                       {m.description}
                     </span>
                     <span className="row__meta">
-                      {m.category}
+                      {isDebt(m) ? `${m.kind === 'gasto' ? '→' : '←'} ${m.person}` : m.category}
                       {groupByDay ? ` · ${timeLabel(m.createdAt)}` : ''}
                     </span>
                   </span>
@@ -175,6 +194,7 @@ export function MovementList({
 
                 {isOpen && (
                   <div className="row__actions">
+                    {!isDebt(m) && (
                     <div className="row__cat-selector" role="group" aria-label="Cambiar categoría">
                       {CATEGORIES.map((cat) => (
                         <button
@@ -187,6 +207,7 @@ export function MovementList({
                         </button>
                       ))}
                     </div>
+                    )}
                     <button
                       type="button"
                       className="row__delete"

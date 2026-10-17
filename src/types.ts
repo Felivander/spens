@@ -10,6 +10,12 @@ export interface Movement {
   /** Local calendar day, `yyyy-mm-dd`. */
   date: string
   createdAt: number
+  /**
+   * Set on loans between people. `kind` still says which way the cash moved
+   * (gasto = I handed money over, ingreso = I received it), so the balance
+   * math is unchanged; these are just kept out of monthly spend/income.
+   */
+  person?: string
 }
 
 export type Scope = 'mes' | 'semana'

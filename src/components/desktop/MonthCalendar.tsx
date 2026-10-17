@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { formatCompact } from '../../lib/format'
 import { toISODate, todayISO, weekdayIndex } from '../../lib/dates'
 import type { Movement } from '../../types'
+import { isDebt } from '../../lib/debts'
 
 const WEEKDAY_INITIALS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 
@@ -27,6 +28,7 @@ export function MonthCalendar({ anchor, movements, selectedDay, onSelectDay, loc
   const { days, max } = useMemo(() => {
     const days: Record<string, { gasto: number; ingreso: number }> = {}
     for (const m of movements) {
+      if (isDebt(m)) continue
       const d = (days[m.date] ??= { gasto: 0, ingreso: 0 })
       d[m.kind] += m.amount
     }

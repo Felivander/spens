@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { formatMoney } from '../../lib/format'
 import type { Movement } from '../../types'
+import { isDebt } from '../../lib/debts'
 
 interface Props {
   movements: Movement[]
@@ -16,7 +17,7 @@ export function CategoryBreakdown({ movements, active, onSelect, currency, local
     const map = new Map<string, number>()
     let total = 0
     for (const m of movements) {
-      if (m.kind !== 'gasto') continue
+      if (m.kind !== 'gasto' || isDebt(m)) continue
       map.set(m.category, (map.get(m.category) ?? 0) + m.amount)
       total += m.amount
     }
